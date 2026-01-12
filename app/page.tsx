@@ -566,11 +566,11 @@ export default function Home() {
         mount.removeChild(renderer.domElement);
       }
       renderer.dispose();
-      scene.traverse((object) => {
+      scene.traverse((object: THREE.Object3D) => {
         if (object instanceof THREE.Mesh || object instanceof THREE.Line) {
           object.geometry.dispose();
           if (Array.isArray(object.material)) {
-            object.material.forEach((material) => material.dispose());
+            object.material.forEach((material: THREE.Material) => material.dispose());
           } else {
             object.material.dispose();
           }
