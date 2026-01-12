@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f5efe6;
+  --foreground: #1b1d1f;
+  --paper: #fff7eb;
+  --paper-strong: #efe2d2;
+  --accent: #2b6f77;
+  --accent-strong: #1d4e54;
+  --accent-soft: #cfe7e4;
+  --accent-warm: #e89c5b;
+  --ink-muted: #4d5157;
+  --border-soft: #d6c8b8;
+  --glow: #f4d5b8;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-code);
+}
+
+body {
+  background:
+    radial-gradient(1000px 700px at 5% -10%, #fff1de 0%, transparent 60%),
+    radial-gradient(900px 600px at 95% 5%, #d9ecea 0%, transparent 55%),
+    linear-gradient(120deg, #f7efe5 0%, #f3efe6 40%, #f8e6d7 100%);
+  color: var(--foreground);
+  font-family: var(--font-body), sans-serif;
+  min-height: 100vh;
+  letter-spacing: -0.01em;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--foreground);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display), serif;
+  letter-spacing: -0.02em;
+}
+
+canvas {
+  display: block;
+}
+
+@keyframes drift {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(6px, -10px, 0) rotate(1deg);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
