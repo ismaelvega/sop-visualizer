@@ -8,43 +8,43 @@ type RecordingState = "idle" | "recording" | "ready";
 const PRESETS = [
   {
     id: "none",
-    label: "No event",
+    label: "Sin evento",
     frequency: 0,
     amplitude: 0.05,
-    severity: "Baseline",
-    detail: "Normal operation, no mechanical disturbance.",
+    severity: "Base",
+    detail: "Operación normal, sin perturbación mecánica.",
   },
   {
     id: "shake-1",
-    label: "Shaking 1 Hz",
+    label: "Sacudida 1 Hz",
     frequency: 1,
     amplitude: 0.14,
-    severity: "Low",
-    detail: "Ambient vibration, benign noise.",
+    severity: "Baja",
+    detail: "Vibración ambiental, ruido benigno.",
   },
   {
     id: "shake-3",
-    label: "Shaking 3 Hz",
+    label: "Sacudida 3 Hz",
     frequency: 3,
     amplitude: 0.22,
-    severity: "Moderate",
-    detail: "Minor disturbance with clear fingerprint.",
+    severity: "Moderada",
+    detail: "Disturbio menor con huella clara.",
   },
   {
     id: "shake-5",
-    label: "Shaking 5 Hz",
+    label: "Sacudida 5 Hz",
     frequency: 5,
     amplitude: 0.3,
-    severity: "High",
-    detail: "Sustained mechanical stress.",
+    severity: "Alta",
+    detail: "Estrés mecánico sostenido.",
   },
   {
     id: "shake-10",
-    label: "Shaking 10 Hz",
+    label: "Sacudida 10 Hz",
     frequency: 10,
     amplitude: 0.36,
-    severity: "Critical",
-    detail: "Intrusion-level shake events.",
+    severity: "Crítica",
+    detail: "Eventos de sacudida a nivel de intrusión.",
   },
 ];
 
@@ -73,6 +73,7 @@ export default function Home() {
     useState<RecordingState>("idle");
   const [recordingProgress, setRecordingProgress] = useState(0);
   const [recordingDuration, setRecordingDuration] = useState(6);
+  const [indefiniteRecording, setIndefiniteRecording] = useState(false);
   const [recordedData, setRecordedData] = useState<number[]>([]);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [readout, setReadout] = useState({
@@ -105,6 +106,7 @@ export default function Home() {
   const recordingStateRef = useRef<RecordingState>(recordingState);
   const recordedDataRef = useRef(recordedData);
   const recordingDurationRef = useRef(recordingDuration);
+  const indefiniteRecordingRef = useRef(indefiniteRecording);
 
   useEffect(() => {
     frequencyRef.current = frequency;
@@ -141,6 +143,10 @@ export default function Home() {
   useEffect(() => {
     recordingDurationRef.current = recordingDuration;
   }, [recordingDuration]);
+
+  useEffect(() => {
+    indefiniteRecordingRef.current = indefiniteRecording;
+  }, [indefiniteRecording]);
 
   const updateRecordingState = useCallback((state: RecordingState) => {
     recordingStateRef.current = state;
@@ -345,9 +351,12 @@ export default function Home() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, width, height);
 
-      const padding = 18;
-      const graphWidth = width - padding * 2;
-      const graphHeight = height - padding * 2;
+      const leftPadding = 36;
+      const rightPadding = 18;
+      const topPadding = 18;
+      const bottomPadding = 28;
+      const graphWidth = width - leftPadding - rightPadding;
+      const graphHeight = height - topPadding - bottomPadding;
 
       ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
       ctx.fillRect(0, 0, width, height);
@@ -355,20 +364,42 @@ export default function Home() {
       ctx.strokeStyle = "rgba(27, 28, 31, 0.12)";
       ctx.lineWidth = 1;
       for (let i = 0; i <= 4; i += 1) {
-        const y = padding + (graphHeight / 4) * i;
+        const y = topPadding + (graphHeight / 4) * i;
         ctx.beginPath();
-        ctx.moveTo(padding, y);
-        ctx.lineTo(width - padding, y);
+        ctx.moveTo(leftPadding, y);
+        ctx.lineTo(width - rightPadding, y);
         ctx.stroke();
       }
 
       ctx.strokeStyle = "rgba(27, 28, 31, 0.35)";
       ctx.setLineDash([5, 5]);
       ctx.beginPath();
-      ctx.moveTo(padding, padding + graphHeight / 2);
-      ctx.lineTo(width - padding, padding + graphHeight / 2);
+      ctx.moveTo(leftPadding, topPadding + graphHeight / 2);
+      ctx.lineTo(width - rightPadding, topPadding + graphHeight / 2);
       ctx.stroke();
       ctx.setLineDash([]);
+
+      // Y-axis labels
+      ctx.fillStyle = "rgba(27, 28, 31, 0.6)";
+      ctx.font = "10px sans-serif";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      const yLabels = ["+1", "+0.5", "0", "-0.5", "-1"];
+      for (let i = 0; i <= 4; i += 1) {
+        const y = topPadding + (graphHeight / 4) * i;
+        ctx.fillText(yLabels[i], leftPadding - 4, y);
+      }
+
+      // X-axis labels (time in seconds)
+      const totalSeconds = data.length > 0 ? data.length / SAMPLE_RATE : recordingDurationRef.current;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      const xLabelCount = 5;
+      for (let i = 0; i <= xLabelCount; i += 1) {
+        const x = leftPadding + (graphWidth * i) / xLabelCount;
+        const timeLabel = ((totalSeconds * i) / xLabelCount).toFixed(1) + "s";
+        ctx.fillText(timeLabel, x, topPadding + graphHeight + 4);
+      }
 
       if (data.length > 1) {
         const maxValue =
@@ -379,9 +410,9 @@ export default function Home() {
         ctx.lineWidth = 2.4;
         ctx.beginPath();
         data.forEach((value, index) => {
-          const x = padding + (graphWidth * index) / (data.length - 1);
+          const x = leftPadding + (graphWidth * index) / (data.length - 1);
           const y =
-            padding + graphHeight / 2 - (value / maxValue) * scale;
+            topPadding + graphHeight / 2 - (value / maxValue) * scale;
           if (index === 0) {
             ctx.moveTo(x, y);
           } else {
@@ -394,10 +425,10 @@ export default function Home() {
       if (isLive) {
         ctx.strokeStyle = "#e89c5b";
         ctx.lineWidth = 2;
-        const x = padding + graphWidth * Math.min(progress, 1);
+        const x = leftPadding + graphWidth * Math.min(progress, 1);
         ctx.beginPath();
-        ctx.moveTo(x, padding);
-        ctx.lineTo(x, padding + graphHeight);
+        ctx.moveTo(x, topPadding);
+        ctx.lineTo(x, topPadding + graphHeight);
         ctx.stroke();
       }
     };
@@ -489,11 +520,13 @@ export default function Home() {
           Math.round(recordingDurationRef.current * SAMPLE_RATE)
         );
 
-        if (recordingRef.current.length >= maxSamples) {
+        if (!indefiniteRecordingRef.current && recordingRef.current.length >= maxSamples) {
           stopRecording();
         } else if (timestamp - lastProgressUpdateRef.current > 120) {
           lastProgressUpdateRef.current = timestamp;
-          const progress = recordingRef.current.length / maxSamples;
+          const progress = indefiniteRecordingRef.current
+            ? 0
+            : recordingRef.current.length / maxSamples;
           setRecordingProgress(progress);
           setRecordingSeconds(recordingRef.current.length / SAMPLE_RATE);
         }
@@ -509,7 +542,9 @@ export default function Home() {
       );
       const liveProgress =
         recordingStateRef.current === "recording"
-          ? recordingRef.current.length / maxSamples
+          ? indefiniteRecordingRef.current
+            ? 1
+            : recordingRef.current.length / maxSamples
           : 1;
       drawRecording(
         dataToRender,
@@ -550,38 +585,38 @@ export default function Home() {
       <div className="pointer-events-none absolute right-12 top-16 h-40 w-40 rounded-[40%] bg-[rgba(207,231,228,0.8)] blur-2xl animate-[drift_8s_ease-in-out_infinite]" />
       <div className="pointer-events-none absolute bottom-12 left-1/3 h-32 w-32 rounded-full bg-[rgba(232,156,91,0.4)] blur-2xl animate-[drift_10s_ease-in-out_infinite]" />
 
-      <main className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 pb-20 pt-16">
+      <main className="relative mx-auto flex min-h-screen w-full max-w-9xl flex-col px-6 pb-20 pt-16">
         <header className="flex flex-col gap-6">
           <div className="flex items-center gap-4 text-xs uppercase tracking-[0.4em] text-[var(--ink-muted)]">
             <span className="h-[1px] w-16 bg-[rgba(43,111,119,0.6)]" />
-            SOP Shaker Lab
+            Laboratorio SOP
           </div>
           <div className="flex flex-col gap-4">
             <h1 className="text-4xl font-semibold leading-tight text-[var(--foreground)] md:text-5xl">
-              Interactive simulator for SOP shaking experiments
+              Simulador interactivo para experimentos de sacudida SOP
             </h1>
             <p className="max-w-2xl text-lg text-[var(--ink-muted)]">
-              Recreate the robotic arm perturbations, cable motion, and sinusoidal
-              noise injection described in the paper. Tune vibration classes,
-              record cable tip displacement, and watch the fingerprint evolve in
-              real time.
+              Recrea las perturbaciones del brazo robótico, el movimiento del
+              cable y la inyección de ruido sinusoidal descritos en el artículo.
+              Ajusta las clases de vibración, registra el desplazamiento de la
+              punta del cable y observa cómo evoluciona la huella en tiempo real.
             </p>
           </div>
         </header>
 
-        <section className="mt-12 grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+        <section className="mt-12 grid gap-8   lg:grid-cols-[0.85fr_1.15fr]">
           <div className="rounded-[32px] border border-[var(--border-soft)] bg-[rgba(255,247,235,0.85)] p-6 shadow-[0_30px_80px_-60px_rgba(27,29,31,0.8)] backdrop-blur">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-[var(--ink-muted)]">
-                  Testbed playback
+                  Reproducción del banco de pruebas
                 </p>
                 <h2 className="text-2xl font-semibold text-[var(--foreground)]">
-                  Robotic arm + cable
+                  Brazo robótico + cable
                 </h2>
               </div>
               <span className="rounded-full border border-[var(--accent)]/60 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
-                {isRunning ? "Running" : "Paused"}
+                {isRunning ? "En marcha" : "Pausado"}
               </span>
             </div>
             <div
@@ -591,7 +626,7 @@ export default function Home() {
             <div className="mt-5 grid gap-4 md:grid-cols-3">
               <div className="rounded-2xl border border-[var(--border-soft)] bg-white/70 p-4">
                 <p className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
-                  Arm angle
+                  Ángulo del brazo
                 </p>
                 <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">
                   {readout.angle.toFixed(2)} rad
@@ -599,7 +634,7 @@ export default function Home() {
               </div>
               <div className="rounded-2xl border border-[var(--border-soft)] bg-white/70 p-4">
                 <p className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
-                  Tip displacement
+                  Desplazamiento de la punta
                 </p>
                 <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">
                   {(readout.tip * 1000).toFixed(1)} mm
@@ -607,7 +642,7 @@ export default function Home() {
               </div>
               <div className="rounded-2xl border border-[var(--border-soft)] bg-white/70 p-4">
                 <p className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
-                  SOPAS proxy
+                  Proxy de SOPAS
                 </p>
                 <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">
                   {readout.sopas.toFixed(2)} rad/s
@@ -618,13 +653,135 @@ export default function Home() {
 
           <div className="flex flex-col gap-6">
             <div className="rounded-[28px] border border-[var(--border-soft)] bg-[rgba(255,247,235,0.9)] p-6 shadow-[0_24px_60px_-50px_rgba(27,29,31,0.75)] backdrop-blur">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-[var(--ink-muted)]">
+                    Registro
+                  </p>
+                  <h2 className="text-2xl font-semibold text-[var(--foreground)]">
+                    Desplazamiento de la punta del cable
+                  </h2>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {recordingState !== "recording" ? (
+                    <button
+                      className="rounded-full border border-[rgba(43,111,119,0.6)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)] transition hover:bg-[var(--accent-soft)]"
+                      onClick={startRecording}
+                      type="button"
+                    >
+                      Capturar
+                    </button>
+                  ) : (
+                    <button
+                      className="rounded-full border border-[rgba(232,156,91,0.8)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent-warm)] transition hover:bg-[rgba(232,156,91,0.2)]"
+                      onClick={stopRecording}
+                      type="button"
+                    >
+                      Detener
+                    </button>
+                  )}
+                  <button
+                    className="rounded-full border border-[var(--border-soft)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--ink-muted)] transition hover:bg-white/60"
+                    onClick={clearRecording}
+                    type="button"
+                  >
+                    Limpiar
+                  </button>
+                </div>
+              </div>
+              <div className="mt-4">
+                <canvas
+                  ref={recordingCanvasRef}
+                  className="h-36 w-full rounded-2xl border border-[var(--border-soft)] bg-white/60"
+                />
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-[var(--ink-muted)]">
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs uppercase tracking-[0.25em]">
+                    Estado
+                  </span>
+                  <span className="font-semibold text-[var(--foreground)]">
+                    {recordingState === "recording"
+                      ? "Grabando"
+                      : recordingState === "ready"
+                      ? "Listo"
+                      : "Inactivo"}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs uppercase tracking-[0.25em]">
+                    Duración
+                  </span>
+                  <span className="font-semibold text-[var(--foreground)]">
+                    {recordingState === "recording"
+                      ? indefiniteRecording
+                        ? `${recordingSeconds.toFixed(1)}s`
+                        : `${recordingSeconds.toFixed(1)}s / ${recordingDuration.toFixed(0)}s`
+                      : `${(recordedData.length / SAMPLE_RATE).toFixed(1)}s`}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs uppercase tracking-[0.25em]">
+                    Frecuencia de muestreo
+                  </span>
+                  <span className="font-semibold text-[var(--foreground)]">
+                    {SAMPLE_RATE} Hz
+                  </span>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-4">
+                <label className="flex items-center gap-2 text-xs text-[var(--ink-muted)]">
+                  <input
+                    type="checkbox"
+                    checked={indefiniteRecording}
+                    onChange={(e) => setIndefiniteRecording(e.target.checked)}
+                    style={{ accentColor: "var(--accent)" }}
+                    disabled={recordingState === "recording"}
+                  />
+                  <span className="uppercase tracking-[0.2em]">Indefinido</span>
+                </label>
+                {!indefiniteRecording && (
+                  <div className="flex items-center gap-2 min-w-[140px]">
+                    <span className="text-xs uppercase tracking-[0.2em] text-[var(--ink-muted)]">
+                      Duración
+                    </span>
+                    <input
+                      type="range"
+                      min={3}
+                      max={12}
+                      step={1}
+                      value={recordingDuration}
+                      onChange={(event) =>
+                        setRecordingDuration(parseInt(event.target.value, 10))
+                      }
+                      className="flex-1"
+                      style={{ accentColor: "var(--accent)" }}
+                      disabled={recordingState === "recording"}
+                    />
+                    <span className="text-xs font-semibold text-[var(--foreground)]">
+                      {recordingDuration}s
+                    </span>
+                  </div>
+                )}
+              </div>
+              {recordingState === "recording" && !indefiniteRecording && (
+                <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[var(--paper-strong)]">
+                  <div
+                    className="h-full rounded-full bg-[var(--accent)] transition-all"
+                    style={{ width: `${Math.min(recordingProgress * 100, 100)}%` }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-[28px] border border-[var(--border-soft)] bg-[rgba(255,247,235,0.9)] p-6 shadow-[0_24px_60px_-50px_rgba(27,29,31,0.75)] backdrop-blur">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.3em] text-[var(--ink-muted)]">
-                    Control deck
+                    Panel de control
                   </p>
                   <h2 className="text-2xl font-semibold text-[var(--foreground)]">
-                    Shaking + noise
+                    Sacudida + ruido
                   </h2>
                 </div>
                 <button
@@ -632,15 +789,15 @@ export default function Home() {
                   onClick={() => setIsRunning((prev) => !prev)}
                   type="button"
                 >
-                  {isRunning ? "Pause" : "Resume"}
+                  {isRunning ? "Pausar" : "Reanudar"}
                 </button>
               </div>
 
               <div className="mt-6 space-y-5">
                 <div className="space-y-2">
-                  <label className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
-                    Preset class
-                  </label>
+                    <label className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
+                      Clase preestablecida
+                    </label>
                   <select
                     className="w-full rounded-2xl border border-[var(--border-soft)] bg-white/80 px-4 py-3 text-base text-[var(--foreground)] shadow-sm"
                     value={presetId}
@@ -651,18 +808,18 @@ export default function Home() {
                         {preset.label} - {preset.severity}
                       </option>
                     ))}
-                    <option value="custom">Custom</option>
+                    <option value="custom">Personalizado</option>
                   </select>
                   <p className="text-sm text-[var(--ink-muted)]">
                     {activePreset?.detail ??
-                      "Custom settings. Adjust the sliders below."}
+                      "Configuración personalizada. Ajusta los deslizadores abajo."}
                   </p>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <label className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
-                      Shake frequency
+                      Frecuencia de sacudida
                     </label>
                     <input
                       type="range"
@@ -687,7 +844,7 @@ export default function Home() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
-                      Shake amplitude
+                      Amplitud de sacudida
                     </label>
                     <input
                       type="range"
@@ -716,11 +873,11 @@ export default function Home() {
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <p className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
-                        Noise injection
+                        Inyección de ruido
                       </p>
                       <p className="text-sm text-[var(--foreground)]">
-                        Add sinusoidal interference to emulate environmental
-                        vibrations.
+                        Añade interferencia sinusoidal para emular vibraciones
+                        ambientales.
                       </p>
                     </div>
                     <label className="flex items-center gap-2 text-sm font-semibold text-[var(--foreground)]">
@@ -730,13 +887,13 @@ export default function Home() {
                         onChange={(event) => setNoiseEnabled(event.target.checked)}
                         style={{ accentColor: "var(--accent)" }}
                       />
-                      {noiseEnabled ? "On" : "Off"}
+                      {noiseEnabled ? "Activado" : "Desactivado"}
                     </label>
                   </div>
                   <div className="mt-4 grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <label className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
-                        Noise frequency
+                        Frecuencia de ruido
                       </label>
                       <input
                         type="range"
@@ -761,7 +918,7 @@ export default function Home() {
                     </div>
                     <div className="space-y-2">
                       <label className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
-                        Noise amplitude
+                        Amplitud de ruido
                       </label>
                       <input
                         type="range"
@@ -791,19 +948,20 @@ export default function Home() {
 
             <div className="rounded-[28px] border border-[var(--border-soft)] bg-[rgba(255,247,235,0.9)] p-6 shadow-[0_24px_60px_-50px_rgba(27,29,31,0.75)] backdrop-blur">
               <p className="text-xs uppercase tracking-[0.3em] text-[var(--ink-muted)]">
-                Paper setup
+                Montaje del estudio
               </p>
               <h2 className="text-2xl font-semibold text-[var(--foreground)]">
-                Experiment summary
+                Resumen del experimento
               </h2>
               <div className="mt-4 space-y-3 text-sm text-[var(--ink-muted)]">
                 <p>
-                  CW laser 1530 nm (6 dBm) -> SMF 8 km + 5 km -> robotic arm shakes
-                  a short fiber section -> polarimeter sampling 1500 Hz (ATE 16).
+                  Láser CW 1530 nm (6 dBm) -&gt; SMF 8 km + 5 km -&gt; el brazo robótico
+                  sacude una sección corta de fibra -&gt; polarímetro con muestreo a
+                  1500 Hz (ATE 16).
                 </p>
                 <p>
-                  Five severity classes: no event, 1 Hz, 3 Hz, 5 Hz, 10 Hz.
-                  Noise sweeps at 1/3/5 Hz to test resilience.
+                  Cinco clases de severidad: sin evento, 1 Hz, 3 Hz, 5 Hz, 10 Hz.
+                  Barridos de ruido a 1/3/5 Hz para probar resiliencia.
                 </p>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
@@ -816,145 +974,6 @@ export default function Home() {
                   </span>
                 ))}
               </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="mt-10 grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-[32px] border border-[var(--border-soft)] bg-[rgba(255,247,235,0.85)] p-6 shadow-[0_30px_80px_-60px_rgba(27,29,31,0.8)] backdrop-blur">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-[var(--ink-muted)]">
-                  Recording
-                </p>
-                <h2 className="text-2xl font-semibold text-[var(--foreground)]">
-                  Cable tip displacement
-                </h2>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {recordingState !== "recording" ? (
-                  <button
-                    className="rounded-full border border-[rgba(43,111,119,0.6)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)] transition hover:bg-[var(--accent-soft)]"
-                    onClick={startRecording}
-                    type="button"
-                  >
-                    Capture
-                  </button>
-                ) : (
-                  <button
-                    className="rounded-full border border-[rgba(232,156,91,0.8)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent-warm)] transition hover:bg-[rgba(232,156,91,0.2)]"
-                    onClick={stopRecording}
-                    type="button"
-                  >
-                    Stop
-                  </button>
-                )}
-                <button
-                  className="rounded-full border border-[var(--border-soft)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--ink-muted)] transition hover:bg-white/60"
-                  onClick={clearRecording}
-                  type="button"
-                >
-                  Clear
-                </button>
-              </div>
-            </div>
-            <div className="mt-5">
-              <canvas
-                ref={recordingCanvasRef}
-                className="h-48 w-full rounded-2xl border border-[var(--border-soft)] bg-white/60"
-              />
-            </div>
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-4 text-sm text-[var(--ink-muted)]">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs uppercase tracking-[0.25em]">
-                  Status
-                </span>
-                <span className="font-semibold text-[var(--foreground)]">
-                  {recordingState === "recording"
-                    ? "Recording"
-                    : recordingState === "ready"
-                    ? "Ready"
-                    : "Idle"}
-                </span>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-xs uppercase tracking-[0.25em]">
-                  Duration
-                </span>
-                <span className="font-semibold text-[var(--foreground)]">
-                  {recordingState === "recording"
-                    ? `${recordingSeconds.toFixed(1)}s / ${recordingDuration.toFixed(
-                        0
-                      )}s`
-                    : `${(recordedData.length / SAMPLE_RATE).toFixed(1)}s`}
-                </span>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-xs uppercase tracking-[0.25em]">
-                  Sample rate
-                </span>
-                <span className="font-semibold text-[var(--foreground)]">
-                  {SAMPLE_RATE} Hz
-                </span>
-              </div>
-              <div className="flex flex-col gap-1 min-w-[160px]">
-                <span className="text-xs uppercase tracking-[0.25em]">
-                  Recording length
-                </span>
-                <input
-                  type="range"
-                  min={3}
-                  max={12}
-                  step={1}
-                  value={recordingDuration}
-                  onChange={(event) =>
-                    setRecordingDuration(parseInt(event.target.value, 10))
-                  }
-                  className="w-full"
-                  style={{ accentColor: "var(--accent)" }}
-                  disabled={recordingState === "recording"}
-                />
-              </div>
-            </div>
-            {recordingState === "recording" && (
-              <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[var(--paper-strong)]">
-                <div
-                  className="h-full rounded-full bg-[var(--accent)] transition-all"
-                  style={{ width: `${Math.min(recordingProgress * 100, 100)}%` }}
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-[28px] border border-[var(--border-soft)] bg-[rgba(255,247,235,0.9)] p-6 shadow-[0_24px_60px_-50px_rgba(27,29,31,0.75)] backdrop-blur">
-            <p className="text-xs uppercase tracking-[0.3em] text-[var(--ink-muted)]">
-              Interpretation
-            </p>
-            <h2 className="text-2xl font-semibold text-[var(--foreground)]">
-              What to look for
-            </h2>
-            <div className="mt-4 space-y-3 text-sm text-[var(--ink-muted)]">
-              <p>
-                Increase shaking frequency to widen the cable tip oscillation.
-                Inject noise at 1-5 Hz to emulate the paper&apos;s resilience tests.
-              </p>
-              <p>
-                The SOPAS proxy reflects how quickly the arm changes direction,
-                mirroring the angular speed calculation on Stokes trajectories.
-              </p>
-              <p>
-                Capture multiple runs to compare clean vs noisy fingerprints and
-                how class boundaries tighten as noise rises.
-              </p>
-            </div>
-            <div className="mt-5 rounded-2xl border border-[var(--border-soft)] bg-white/70 p-4 text-sm text-[var(--foreground)]">
-              <p className="font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)] text-xs">
-                Suggested sweep
-              </p>
-              <p className="mt-2">
-                3 Hz shaking -> record 6 s clean -> add 3 Hz noise -> record 6 s ->
-                compare overlay.
-              </p>
             </div>
           </div>
         </section>

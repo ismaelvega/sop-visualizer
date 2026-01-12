@@ -24,9 +24,9 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SOP Shaker Lab",
+  title: "Laboratorio SOP",
   description:
-    "Interactive simulator that recreates SOP shaking experiments with a robotic arm, cable motion, and noise injection.",
+    "Simulador interactivo que recrea los experimentos de sacudida SOP con brazo robótico, movimiento del cable e inyección de ruido.",
 };
 
 export default function RootLayout({
