@@ -963,6 +963,16 @@ export default function Home() {
                   Cinco clases de severidad: sin evento, 1 Hz, 3 Hz, 5 Hz, 10 Hz.
                   Barridos de ruido a 1/3/5 Hz para probar resiliencia.
                 </p>
+                <p className="pt-2">
+                  <a
+                    href="https://www.mdpi.com/2673-2688/6/7/131"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[var(--accent-strong)] hover:underline font-medium"
+                  >
+                    Leer artículo completo en MDPI →
+                  </a>
+                </p>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 {PRESETS.map((preset) => (
